@@ -20,14 +20,14 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
-
+    @Column(unique = true)
     private Long telegramId;
     private String name;
     private String username;
     private UserState state;
     private String language;
     @CreatedDate
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt = LocalDateTime.now();
     @LastModifiedDate
     private LocalDateTime updatedAt;
 

@@ -1,4 +1,4 @@
-package tech.nuqta.investtraderbotfiverr;
+package tech.nuqta.investtraderbotfiverr.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

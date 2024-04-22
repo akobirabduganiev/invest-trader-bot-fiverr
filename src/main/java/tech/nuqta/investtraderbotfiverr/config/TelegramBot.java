@@ -11,34 +11,32 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import tech.nuqta.investtraderbotfiverr.controller.MessageController;
-
-import java.util.HashMap;
+import tech.nuqta.investtraderbotfiverr.service.MessageService;
 
 @Component
 @RequiredArgsConstructor
 public class TelegramBot extends TelegramLongPollingBot {
-    private final MessageController messageController;
+    private final MessageService messageService;
     private static final String START_COMMAND = "/start";
     private static final String BOT_USERNAME = "@InvestTraderBot";
-    public static final HashMap<Long, String> userState = new HashMap<>();
 
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String text = update.getMessage().getText();
             if (text.equals(START_COMMAND)) {
-                messageController.handleStartMessage(update.getMessage());
+                messageService.handleStartMessage(update.getMessage());
             }
-
+        } else if (update.hasCallbackQuery()) {
+            messageService.handleCallbackMessage(update.getCallbackQuery());
         }
     }
 
     @Autowired
     @Lazy
-    public TelegramBot(TelegramBotsApi telegramBotsApi, MessageController messageController) throws TelegramApiException {
+    public TelegramBot(TelegramBotsApi telegramBotsApi, MessageService messageService) throws TelegramApiException {
         super("7019113638:AAEjBNmHpDhrHOaoyrc1w6e6NAMyULDfJpE");
-        this.messageController = messageController;
+        this.messageService = messageService;
         telegramBotsApi.registerBot(this);
     }
 
