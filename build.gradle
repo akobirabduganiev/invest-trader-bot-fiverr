@@ -29,6 +29,7 @@ dependencies {
     implementation group: 'org.telegram', name: 'telegrambots-spring-boot-starter', version: '6.9.0'
     implementation 'com.paypal.sdk:paypal-core:1.7.2'
     implementation 'com.paypal.sdk:rest-api-sdk:1.8.1'
+    implementation 'javax.xml.bind:jaxb-api:2.3.0'
     runtimeOnly 'org.postgresql:postgresql'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

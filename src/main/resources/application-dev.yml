@@ -1,7 +1,7 @@
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://10.254.10.21:5433/invest-trader
+    url: jdbc:postgresql://localhost/invest-trader
     username: postgres
     password: root
   jpa:
