@@ -9,28 +9,47 @@ import java.util.Map;
 
 
 public class TelegramBotUtils {
+    // Initialize InlineKeyboardButton
+    private static InlineKeyboardButton initializeInlineKeyboardButton(Map.Entry<String, String> buttonInfo) {
+        InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
+        inlineKeyboardButton.setText(buttonInfo.getKey());
+        inlineKeyboardButton.setCallbackData(buttonInfo.getValue());
+
+        return inlineKeyboardButton;
+    }
+
+    // Create keyboard button
+    private static InlineKeyboardButton createKeyboardButton(Map.Entry<String, String> buttonInfo) {
+        return initializeInlineKeyboardButton(buttonInfo);
+    }
+
     public static InlineKeyboardMarkup createInlineKeyboardButton(List<Map.Entry<String, String>> buttonInfos) {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
-        List<InlineKeyboardButton> keyboardButtonsRow1 = new ArrayList<>();
+        List<InlineKeyboardButton> currentRowButtons = new ArrayList<>();
         for (int i = 0; i < buttonInfos.size(); i++) {
-            keyboardButtonsRow1.add(createKeyboardButton(buttonInfos.get(i)));
+            currentRowButtons.add(createKeyboardButton(buttonInfos.get(i)));
             if ((i + 1) % 2 == 0) {
-                rowList.add(new ArrayList<>(keyboardButtonsRow1));
-                keyboardButtonsRow1.clear();
+                rowList.add(new ArrayList<>(currentRowButtons));
+                currentRowButtons.clear();
             }
         }
-        if (!keyboardButtonsRow1.isEmpty()) {
-            rowList.add(keyboardButtonsRow1);
+        if (!currentRowButtons.isEmpty()) {
+            rowList.add(currentRowButtons);
         }
         inlineKeyboardMarkup.setKeyboard(rowList);
         return inlineKeyboardMarkup;
     }
 
-    private static InlineKeyboardButton createKeyboardButton(Map.Entry<String, String> buttonInfo) {
-        InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
-        inlineKeyboardButton.setText(buttonInfo.getKey());
-        inlineKeyboardButton.setCallbackData(buttonInfo.getValue());
-        return inlineKeyboardButton;
+    public static InlineKeyboardMarkup createInlineKeyboardButtonOneEachRow(List<Map.Entry<String, String>> buttonInfos) {
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
+        for (Map.Entry<String, String> buttonInfo : buttonInfos) {
+            List<InlineKeyboardButton> keyboardButtonsRow = new ArrayList<>();
+            keyboardButtonsRow.add(createKeyboardButton(buttonInfo));
+            rowList.add(keyboardButtonsRow);
+        }
+        inlineKeyboardMarkup.setKeyboard(rowList);
+        return inlineKeyboardMarkup;
     }
 }

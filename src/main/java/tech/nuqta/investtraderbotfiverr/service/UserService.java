@@ -33,6 +33,11 @@ public class UserService {
         return userEntity.getState();
     }
 
+    public UserEntity getUser(Long telegramId) {
+        Optional<UserEntity> userEntityOptional = userRepository.findByTelegramId(telegramId);
+        return userEntityOptional.orElse(new UserEntity());
+    }
+
     @CacheEvict(value = "state", key = "#telegramId")
     public UserEntity updateUserState(Long telegramId, UserState state) {
         Optional<UserEntity> userEntityOptional = userRepository.findByTelegramId(telegramId);

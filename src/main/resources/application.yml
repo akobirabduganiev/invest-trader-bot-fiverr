@@ -7,3 +7,7 @@ paypal:
   client-id: ATW1SSJWqAysZ9lpdQl_tK-Plh1YipkPflP1-39FXf4EVrSJeeuO7pC9php1IAaRmkhXUiKfUlxOKz1R
   client-secret: ELnVhGhTCnAIDm0pnyKVfK9fulMwFBwVo0SMDetq8m9Rbz52OWS-1iooTOsGuLoHYsDgYfWNPOee8r0T
   mode: sandbox # Use #sandbox' for testing and 'live' for Production
+subscription:
+  type:
+    monthly: 25,00€
+    weekly: 10,00€

@@ -1,6 +1,5 @@
 package tech.nuqta.investtraderbotfiverr.config;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
@@ -17,15 +16,22 @@ import tech.nuqta.investtraderbotfiverr.enums.UserState;
 import tech.nuqta.investtraderbotfiverr.service.MessageService;
 import tech.nuqta.investtraderbotfiverr.service.UserService;
 
-import java.util.Locale;
-
 @Component
-@RequiredArgsConstructor
 public class TelegramBot extends TelegramLongPollingBot {
     private final MessageService messageService;
     private final MessageSource messageSource;
     private final UserService userService;
     private static final String BOT_USERNAME = "@InvestTraderBot";
+
+    @Lazy
+    @Autowired
+    public TelegramBot(TelegramBotsApi telegramBotsApi, MessageService messageService, MessageSource messageSource, UserService userService) throws TelegramApiException {
+        super("7019113638:AAEjBNmHpDhrHOaoyrc1w6e6NAMyULDfJpE");
+        this.messageService = messageService;
+        this.messageSource = messageSource;
+        this.userService = userService;
+        telegramBotsApi.registerBot(this);
+    }
 
     @Override
     public void onUpdateReceived(Update update) {
@@ -37,10 +43,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (state == UserState.START) {
                 messageService.handleStartMessage(message);
             } else {
-                Locale locale = new Locale("en");
-                String sourceMessage = messageSource.getMessage("welcome.message", new Object[]{message.getFrom().getFirstName()}, locale);
-                sendMessage.setText(sourceMessage);
-                sendMsg(sendMessage);
+                messageService.handleMainMessage(message);
             }
 
         } else if (update.hasCallbackQuery()) {
@@ -52,15 +55,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    @Lazy
-    @Autowired
-    public TelegramBot(TelegramBotsApi telegramBotsApi, MessageService messageService, MessageSource messageSource, UserService userService) throws TelegramApiException {
-        super("7019113638:AAEjBNmHpDhrHOaoyrc1w6e6NAMyULDfJpE");
-        this.messageService = messageService;
-        this.messageSource = messageSource;
-        this.userService = userService;
-        telegramBotsApi.registerBot(this);
-    }
 
     @Override
     public String getBotUsername() {
