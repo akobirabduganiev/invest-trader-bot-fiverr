@@ -2,6 +2,7 @@ package tech.nuqta.investtraderbotfiverr.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -9,34 +10,55 @@ import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.send.*;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import tech.nuqta.investtraderbotfiverr.enums.UserState;
 import tech.nuqta.investtraderbotfiverr.service.MessageService;
+import tech.nuqta.investtraderbotfiverr.service.UserService;
+
+import java.util.Locale;
 
 @Component
 @RequiredArgsConstructor
 public class TelegramBot extends TelegramLongPollingBot {
     private final MessageService messageService;
-    private static final String START_COMMAND = "/start";
+    private final MessageSource messageSource;
+    private final UserService userService;
     private static final String BOT_USERNAME = "@InvestTraderBot";
 
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            String text = update.getMessage().getText();
-            if (text.equals(START_COMMAND)) {
-                messageService.handleStartMessage(update.getMessage());
+        if (update.hasMessage()) {
+            var message = update.getMessage();
+            var sendMessage = new SendMessage();
+            sendMessage.setChatId(message.getChatId());
+            var state = userService.getUserState(message.getChatId(), message.getFrom());
+            if (state == UserState.START) {
+                messageService.handleStartMessage(message);
+            } else {
+                Locale locale = new Locale("en");
+                String sourceMessage = messageSource.getMessage("welcome.message", new Object[]{message.getFrom().getFirstName()}, locale);
+                sendMessage.setText(sourceMessage);
+                sendMsg(sendMessage);
             }
+
         } else if (update.hasCallbackQuery()) {
-            messageService.handleCallbackMessage(update.getCallbackQuery());
+            CallbackQuery callbackQuery = update.getCallbackQuery();
+            var state = userService.getUserState(callbackQuery.getFrom().getId(), callbackQuery.getFrom());
+            if (state == UserState.START) {
+                messageService.handleLanguageCallbackQuery(callbackQuery);
+            }
         }
     }
 
-    @Autowired
     @Lazy
-    public TelegramBot(TelegramBotsApi telegramBotsApi, MessageService messageService) throws TelegramApiException {
+    @Autowired
+    public TelegramBot(TelegramBotsApi telegramBotsApi, MessageService messageService, MessageSource messageSource, UserService userService) throws TelegramApiException {
         super("7019113638:AAEjBNmHpDhrHOaoyrc1w6e6NAMyULDfJpE");
         this.messageService = messageService;
+        this.messageSource = messageSource;
+        this.userService = userService;
         telegramBotsApi.registerBot(this);
     }
 

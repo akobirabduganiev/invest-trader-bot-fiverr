@@ -24,6 +24,7 @@ public class UserEntity {
     private Long telegramId;
     private String name;
     private String username;
+    @Enumerated(EnumType.STRING)
     private UserState state;
     private String language;
     @CreatedDate
