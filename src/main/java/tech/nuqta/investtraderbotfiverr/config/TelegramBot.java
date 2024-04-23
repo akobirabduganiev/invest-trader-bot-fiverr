@@ -1,6 +1,7 @@
 package tech.nuqta.investtraderbotfiverr.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,10 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final MessageSource messageSource;
     private final UserService userService;
     private static final String BOT_USERNAME = "@InvestTraderBot";
+    @Value("${subscription.type.monthly}")
+    private String monthlySubscriptionValue;
+    @Value("${subscription.type.weekly}")
+    private String weeklySubscriptionValue;
 
     @Lazy
     @Autowired
@@ -51,6 +56,12 @@ public class TelegramBot extends TelegramLongPollingBot {
             var state = userService.getUserState(callbackQuery.getFrom().getId(), callbackQuery.getFrom());
             if (state == UserState.START) {
                 messageService.handleLanguageCallbackQuery(callbackQuery);
+            }
+
+            if (callbackQuery.getData().equals(monthlySubscriptionValue) || callbackQuery.getData().equals(weeklySubscriptionValue)) {
+                messageService.handleSubscriptionCallbackQuery(callbackQuery);
+            } else if (callbackQuery.getData().equals("paypal") || callbackQuery.getData().equals("stripe")) {
+                messageService.handlePaymentMethodCallbackQuery(callbackQuery);
             }
         }
     }
