@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import tech.nuqta.investtraderbotfiverr.enums.SubscriptionType;
 import tech.nuqta.investtraderbotfiverr.enums.UserState;
 
 import java.time.LocalDateTime;
@@ -27,6 +28,8 @@ public class UserEntity {
     @Enumerated(EnumType.STRING)
     private UserState state;
     private String language;
+    @Enumerated(EnumType.STRING)
+    private SubscriptionType subscriptionType;
     @CreatedDate
     private LocalDateTime createdAt = LocalDateTime.now();
     @LastModifiedDate

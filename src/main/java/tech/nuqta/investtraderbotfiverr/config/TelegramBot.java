@@ -42,8 +42,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         if (update.hasMessage()) {
             var message = update.getMessage();
-            var sendMessage = new SendMessage();
-            sendMessage.setChatId(message.getChatId());
             var state = userService.getUserState(message.getChatId(), message.getFrom());
             if (state == UserState.START) {
                 messageService.handleStartMessage(message);

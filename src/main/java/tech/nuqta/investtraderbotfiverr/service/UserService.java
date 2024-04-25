@@ -53,4 +53,9 @@ public class UserService {
         return userEntity;
     }
 
+    @CacheEvict(value = "state", key = "#userEntity.getTelegramId()")
+    public void saveUser(UserEntity userEntity) {
+        userRepository.save(userEntity);
+    }
+
 }

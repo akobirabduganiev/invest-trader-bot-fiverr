@@ -1,6 +1,5 @@
 package tech.nuqta.investtraderbotfiverr.service;
 
-import com.paypal.api.payments.Payment;
 import com.paypal.base.rest.PayPalRESTException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,10 +11,13 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import tech.nuqta.investtraderbotfiverr.config.TelegramBot;
+import tech.nuqta.investtraderbotfiverr.enums.SubscriptionType;
 import tech.nuqta.investtraderbotfiverr.enums.UserState;
 import tech.nuqta.investtraderbotfiverr.paypal.PaypalService;
 import tech.nuqta.investtraderbotfiverr.repository.UserRepository;
+import tech.nuqta.investtraderbotfiverr.user.UserEntity;
 import tech.nuqta.investtraderbotfiverr.utils.TelegramBotUtils;
 
 import java.util.ArrayList;
@@ -79,7 +81,7 @@ public class MessageService {
         sendMessage.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonOneEachRow(buttonList));
         telegramBot.sendMsg(deleteMessage);
         telegramBot.sendMsg(sendMessage);
-        userRepository.save(userEntity);
+        userService.saveUser(userEntity);
     }
 
 
@@ -92,39 +94,70 @@ public class MessageService {
         buttonList.add(Map.entry("Stripe", "stripe"));
         var user = callbackQuery.getFrom();
         var locale = new Locale(userRepository.findByTelegramId(user.getId()).get().getLanguage());
-        String monthlySubscriptionName = messageSource.getMessage("subscription.type.monthly", null, locale);
-        String weeklySubscriptionName = messageSource.getMessage("subscription.type.monthly", null, locale);
+        var monthlySubscriptionName = messageSource.getMessage("subscription.type.monthly", null, locale);
+        var weeklySubscriptionName = messageSource.getMessage("subscription.type.monthly", null, locale);
         var subscriptionType = callbackQuery.getData().equals(monthlySubscriptionValue) ? monthlySubscriptionName : weeklySubscriptionName;
         editMessageText.setText("Choose a payment method for " + subscriptionType + " subscription");
         editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonOneEachRow(buttonList));
-        userService.updateUserState(user.getId(), UserState.PAYMENT_METHOD_CHOOSING);
+        var userEntity = userService.updateUserState(user.getId(), UserState.PAYMENT_METHOD_CHOOSING);
+        if (callbackQuery.getData().equals(monthlySubscriptionValue))
+            userEntity.setSubscriptionType(SubscriptionType.MONTHLY);
+        else userEntity.setSubscriptionType(SubscriptionType.WEEKLY);
+
+        userService.saveUser(userEntity);
         telegramBot.sendMsg(editMessageText);
     }
 
     public void handlePaymentMethodCallbackQuery(CallbackQuery callbackQuery) {
-        String data = callbackQuery.getData();
+        var data = callbackQuery.getData();
         var user = callbackQuery.getFrom();
-        var locale = new Locale(userRepository.findByTelegramId(user.getId()).get().getLanguage());
+        var entity = userService.getUser(user.getId());
+        var deleteMessage = new DeleteMessage();
+
+        deleteMessage.setMessageId(callbackQuery.getMessage().getMessageId());
+        deleteMessage.setChatId(callbackQuery.getMessage().getChatId());
+        telegramBot.sendMsg(deleteMessage);
+
+        var editMessageText = new EditMessageText();
         var sendMessage = new SendMessage();
+
         sendMessage.setChatId(callbackQuery.getMessage().getChatId().toString());
-        sendMessage.setText("You have chosen " + data + " as payment method");
+        sendMessage.setText("We're getting your payment ready. This may take a moment.");
+
         try {
-            Payment payment = paypalService.createPayment(10.0, "USD", data, "sale", "description",
-                    "http://localhost:8080/payment/cancel", "http://localhost:8080/payment/success");
+            var message = telegramBot.execute(sendMessage);
+            editMessageText.setMessageId(message.getMessageId());
+            editMessageText.setChatId(message.getChatId().toString());
 
-            String approvalLink = payment.getLinks()
-                    .stream()
-                    .filter(link -> link.getRel().equalsIgnoreCase("approval_url"))
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Approval link not found"))
-                    .getHref();
-
-            sendMessage.setText("To continue the payment process please follow the link: " + approvalLink);
-
-        } catch (PayPalRESTException e) {
+        } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
-        telegramBot.sendMsg(sendMessage);
+        var euro = entity.getSubscriptionType() == SubscriptionType.MONTHLY ? monthlySubscriptionValue : weeklySubscriptionValue;
+        euro = euro.replace("€", "").replace(",", ".");
+        double value = Double.parseDouble(euro);
+        if (data.equals("paypal")) {
+            try {
+                var payment = paypalService.createPayment(
+                        value,
+                        "EUR",
+                        "paypal",
+                        "sale",
+                        "Monthly subscription",
+                        "http://localhost:8080/payment/cancel",
+                        "http://localhost:8080/payment/success"
+                );
+                for (var links : payment.getLinks()) {
+                    if (links.getRel().equals("approval_url")) {
+                        editMessageText.setText("Please select the option below to complete your payment.");
+                        editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonWithLink("Pay " + euro, links.getHref()));
+                        break;
+                    }
+                }
+            } catch (PayPalRESTException e) {
+                e.printStackTrace();
+            }
+        }
+        telegramBot.sendMsg(editMessageText);
     }
 
     private List<Map.Entry<String, String>> createLanguageButtonList() {
