@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -24,26 +25,32 @@ public class PaypalService {
             String description,
             String cancelUrl,
             String successUrl) throws PayPalRESTException {
-        Amount amount = new Amount();
-        amount.setCurrency(currency);
-        amount.setTotal(String.format(Locale.forLanguageTag(currency), "%.2f", total)); // 9.99$ - 9,99€
 
-        Transaction transaction = new Transaction();
+        // Set unique RequestId for each API call
+        apiContext.setRequestId(UUID.randomUUID().toString());
+
+        // Continue your existing code...
+
+        var amount = new Amount();
+        amount.setCurrency(currency);
+        amount.setTotal(String.format(Locale.forLanguageTag(currency), "%.2f", total));
+
+        var transaction = new Transaction();
         transaction.setDescription(description);
         transaction.setAmount(amount);
 
         List<Transaction> transactions = new ArrayList<>();
         transactions.add(transaction);
 
-        Payer payer = new Payer();
+        var payer = new Payer();
         payer.setPaymentMethod(method);
 
-        Payment payment = new Payment();
+        var payment = new Payment();
         payment.setIntent(intent);
         payment.setPayer(payer);
         payment.setTransactions(transactions);
 
-        RedirectUrls redirectUrls = new RedirectUrls();
+        var redirectUrls = new RedirectUrls();
         redirectUrls.setCancelUrl(cancelUrl);
         redirectUrls.setReturnUrl(successUrl);
 
@@ -56,10 +63,11 @@ public class PaypalService {
             String paymentId,
             String payerId
     ) throws PayPalRESTException {
-        Payment payment = new Payment();
+        apiContext.setRequestId(UUID.randomUUID().toString());
+        var payment = new Payment();
         payment.setId(paymentId);
 
-        PaymentExecution paymentExecution = new PaymentExecution();
+        var paymentExecution = new PaymentExecution();
         paymentExecution.setPayerId(payerId);
 
         return payment.execute(apiContext, paymentExecution);
