@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
+import tech.nuqta.investtraderbotfiverr.service.TransactionService;
 
 @Controller
 @RequiredArgsConstructor
@@ -17,6 +18,8 @@ import org.springframework.web.servlet.view.RedirectView;
 public class PaypalController {
 
     private final PaypalService paypalService;
+    private final TransactionService transactionService;
+
 
     @GetMapping("/")
     public String home() {
@@ -40,10 +43,9 @@ public class PaypalController {
                     "sale",
                     description,
                     cancelUrl,
-                    successUrl
-            );
+                    successUrl);
 
-            for (Links links: payment.getLinks()) {
+            for (Links links : payment.getLinks()) {
                 if (links.getRel().equals("approval_url")) {
                     return new RedirectView(links.getHref());
                 }
@@ -62,6 +64,7 @@ public class PaypalController {
         try {
             Payment payment = paypalService.executePayment(paymentId, payerId);
             if (payment.getState().equals("approved")) {
+                transactionService.markTransactionAsSuccess(payment.getId());
                 return "paymentSuccess";
             }
         } catch (PayPalRESTException e) {
@@ -69,6 +72,8 @@ public class PaypalController {
         }
         return "paymentSuccess";
     }
+
+
 
     @GetMapping("/payment/cancel")
     public String paymentCancel() {

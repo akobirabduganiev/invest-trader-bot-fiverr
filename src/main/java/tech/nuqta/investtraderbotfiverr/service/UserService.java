@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.User;
 import tech.nuqta.investtraderbotfiverr.enums.UserState;
 import tech.nuqta.investtraderbotfiverr.repository.UserRepository;
-import tech.nuqta.investtraderbotfiverr.user.UserEntity;
+import tech.nuqta.investtraderbotfiverr.entity.UserEntity;
 
 import java.util.Optional;
 

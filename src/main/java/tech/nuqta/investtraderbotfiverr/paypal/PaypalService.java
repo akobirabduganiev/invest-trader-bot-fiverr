@@ -23,8 +23,7 @@ public class PaypalService {
             String intent,
             String description,
             String cancelUrl,
-            String successUrl
-    ) throws PayPalRESTException {
+            String successUrl) throws PayPalRESTException {
         Amount amount = new Amount();
         amount.setCurrency(currency);
         amount.setTotal(String.format(Locale.forLanguageTag(currency), "%.2f", total)); // 9.99$ - 9,99€

@@ -4,10 +4,10 @@ spring:
   profiles:
     active: dev
 paypal:
-  client-id: ATW1SSJWqAysZ9lpdQl_tK-Plh1YipkPflP1-39FXf4EVrSJeeuO7pC9php1IAaRmkhXUiKfUlxOKz1R
-  client-secret: ELnVhGhTCnAIDm0pnyKVfK9fulMwFBwVo0SMDetq8m9Rbz52OWS-1iooTOsGuLoHYsDgYfWNPOee8r0T
+  client-id: AXN7e5ICc2oU9lVtGYJdIm2zkmtKZTCmMoStR6o9Y1VlzIpQiuHUzhVjOx3RPOgjhe19gabb9jxFsnLg
+  client-secret: EMjGGESr5YVbHrKho9XPI7tHgRUdo0dVDEVg6sGSBn3GhuX7D_O4lTcFWQ3wjuqPiQ1hiM6UpSaWNcGB
   mode: sandbox # Use #sandbox' for testing and 'live' for Production
 subscription:
   type:
-    monthly: 25,00€
-    weekly: 10,00€
+    monthly: 25,00 €
+    weekly: 10,00 €

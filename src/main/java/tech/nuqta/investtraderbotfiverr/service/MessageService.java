@@ -13,11 +13,14 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import tech.nuqta.investtraderbotfiverr.config.TelegramBot;
+import tech.nuqta.investtraderbotfiverr.entity.SubscriptionEntity;
+import tech.nuqta.investtraderbotfiverr.entity.TransactionLogEntity;
+import tech.nuqta.investtraderbotfiverr.enums.PaymentMethod;
 import tech.nuqta.investtraderbotfiverr.enums.SubscriptionType;
+import tech.nuqta.investtraderbotfiverr.enums.TransactionStatus;
 import tech.nuqta.investtraderbotfiverr.enums.UserState;
 import tech.nuqta.investtraderbotfiverr.paypal.PaypalService;
 import tech.nuqta.investtraderbotfiverr.repository.UserRepository;
-import tech.nuqta.investtraderbotfiverr.user.UserEntity;
 import tech.nuqta.investtraderbotfiverr.utils.TelegramBotUtils;
 
 import java.util.ArrayList;
@@ -36,6 +39,8 @@ public class MessageService {
     private final MessageSource messageSource;
     private final UserRepository userRepository;
     private final PaypalService paypalService;
+    private final TransactionService transactionService;
+    private final SubscriptionService subscriptionService;
 
     @Value("${subscription.type.monthly}")
     private String monthlySubscriptionValue;
@@ -99,11 +104,14 @@ public class MessageService {
         var subscriptionType = callbackQuery.getData().equals(monthlySubscriptionValue) ? monthlySubscriptionName : weeklySubscriptionName;
         editMessageText.setText("Choose a payment method for " + subscriptionType + " subscription");
         editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonOneEachRow(buttonList));
+        var subscriptionEntity = new SubscriptionEntity();
         var userEntity = userService.updateUserState(user.getId(), UserState.PAYMENT_METHOD_CHOOSING);
-        if (callbackQuery.getData().equals(monthlySubscriptionValue))
-            userEntity.setSubscriptionType(SubscriptionType.MONTHLY);
-        else userEntity.setSubscriptionType(SubscriptionType.WEEKLY);
-
+        if (callbackQuery.getData().equals(monthlySubscriptionValue)) {
+            subscriptionEntity.setSubscriptionType(SubscriptionType.MONTHLY);
+        } else
+            subscriptionEntity.setSubscriptionType(SubscriptionType.WEEKLY);
+        userEntity.setSubscription(subscriptionEntity);
+        subscriptionService.saveSubscription(subscriptionEntity);
         userService.saveUser(userEntity);
         telegramBot.sendMsg(editMessageText);
     }
@@ -111,8 +119,14 @@ public class MessageService {
     public void handlePaymentMethodCallbackQuery(CallbackQuery callbackQuery) {
         var data = callbackQuery.getData();
         var user = callbackQuery.getFrom();
-        var entity = userService.getUser(user.getId());
+        var userEntity = userService.getUser(user.getId());
         var deleteMessage = new DeleteMessage();
+        var transactionLog = new TransactionLogEntity();
+        var subscriptionEntity = subscriptionService.getSubscription(userEntity);
+
+        transactionLog.setTelegramId(user.getId());
+        transactionLog.setPaymentMethod(data.equals("paypal") ? PaymentMethod.PAYPAL : PaymentMethod.STRIPE);
+        transactionLog.setUser(userEntity);
 
         deleteMessage.setMessageId(callbackQuery.getMessage().getMessageId());
         deleteMessage.setChatId(callbackQuery.getMessage().getChatId());
@@ -132,20 +146,24 @@ public class MessageService {
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
-        var euro = entity.getSubscriptionType() == SubscriptionType.MONTHLY ? monthlySubscriptionValue : weeklySubscriptionValue;
-        euro = euro.replace("€", "").replace(",", ".");
-        double value = Double.parseDouble(euro);
-        if (data.equals("paypal")) {
+        var euro = subscriptionEntity.getSubscriptionType() == SubscriptionType.MONTHLY ? monthlySubscriptionValue : weeklySubscriptionValue;
+        double value = Double.parseDouble(euro.replace("€", "").replace(",", "."));
+        if (transactionLog.getPaymentMethod() == PaymentMethod.PAYPAL) {
             try {
                 var payment = paypalService.createPayment(
                         value,
                         "EUR",
                         "paypal",
                         "sale",
-                        "Monthly subscription",
+                        "Subscription payment",
                         "http://localhost:8080/payment/cancel",
-                        "http://localhost:8080/payment/success"
-                );
+                        "http://localhost:8080/payment/success");
+                transactionLog.setAmount(value);
+                transactionLog.setCurrency("EUR");
+                transactionLog.setDescription("Subscription payment");
+                transactionLog.setStatus(TransactionStatus.PENDING);
+                transactionLog.setTransactionId(payment.getId());
+                transactionService.saveTransaction(transactionLog);
                 for (var links : payment.getLinks()) {
                     if (links.getRel().equals("approval_url")) {
                         editMessageText.setText("Please select the option below to complete your payment.");
@@ -158,6 +176,17 @@ public class MessageService {
             }
         }
         telegramBot.sendMsg(editMessageText);
+    }
+
+    public void handlePaymentSuccess() {
+        var sendMessage = new SendMessage();
+        sendMessage.setText("Payment successful. Thank you for subscribing.");
+        sendMessage.setChatId("chatId");
+        try {
+            telegramBot.execute(sendMessage);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 
     private List<Map.Entry<String, String>> createLanguageButtonList() {
