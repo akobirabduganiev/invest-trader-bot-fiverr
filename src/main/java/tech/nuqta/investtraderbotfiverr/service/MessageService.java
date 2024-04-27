@@ -1,6 +1,9 @@
 package tech.nuqta.investtraderbotfiverr.service;
 
 import com.paypal.base.rest.PayPalRESTException;
+import com.stripe.Stripe;
+import com.stripe.exception.StripeException;
+import com.stripe.model.checkout.Session;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
@@ -21,12 +24,10 @@ import tech.nuqta.investtraderbotfiverr.enums.TransactionStatus;
 import tech.nuqta.investtraderbotfiverr.enums.UserState;
 import tech.nuqta.investtraderbotfiverr.paypal.PaypalService;
 import tech.nuqta.investtraderbotfiverr.repository.UserRepository;
+import tech.nuqta.investtraderbotfiverr.stripe.StripeService;
 import tech.nuqta.investtraderbotfiverr.utils.TelegramBotUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 import static tech.nuqta.investtraderbotfiverr.enums.UserState.LANGUAGE_CHOOSING;
 
@@ -39,6 +40,7 @@ public class MessageService {
     private final MessageSource messageSource;
     private final UserRepository userRepository;
     private final PaypalService paypalService;
+    private final StripeService stripeService;
     private final TransactionService transactionService;
     private final SubscriptionService subscriptionService;
 
@@ -189,6 +191,42 @@ public class MessageService {
                     }
                 }
             } catch (PayPalRESTException e) {
+                e.printStackTrace();
+            }
+        }else if (transactionLog.getPaymentMethod() == PaymentMethod.STRIPE) {
+            try {
+                Stripe.apiKey = "sk_test_51P83twEuQQZGBc7JpXsATNdVQ9zY7Rho8RcRhHZgTIQ6QuPZKV32sZnoPi5Eq2Ic88O2HiX60JzzC5eF8H6iX3ZZ00T3IoU8wC";
+
+                Map<String, Object> checkoutSessionParams = new LinkedHashMap<>();
+                checkoutSessionParams.put("cancel_url", "http://localhost:8080/payment/cancel");
+                checkoutSessionParams.put("success_url", "http://localhost:8080/payment/success");
+                checkoutSessionParams.put("payment_method_types", Collections.singletonList("card"));
+                checkoutSessionParams.put("mode", "payment");
+
+                Map<String, Object> lineItem= new LinkedHashMap<>();
+                Map<String, Object> priceData = new LinkedHashMap<>();
+
+                priceData.put("currency", "eur");
+                priceData.put("unit_amount", (long)value*100);
+                priceData.put("product_data", Map.of("name", "Subscription payment"));
+                lineItem.put("price_data", priceData);
+                lineItem.put("quantity", 1);
+
+                checkoutSessionParams.put("line_items", Collections.singletonList(lineItem));
+
+                Session session = Session.create(checkoutSessionParams);
+
+                transactionLog.setAmount(value);
+                transactionLog.setCurrency("EUR");
+                transactionLog.setDescription("Subscription payment");
+                transactionLog.setStatus(TransactionStatus.PENDING);
+                transactionLog.setTransactionId(session.getId());
+                transactionService.saveTransaction(transactionLog);
+
+                String url = session.getUrl(); // use getUrl method on session object
+                editMessageText.setText("Please select the option below to complete your payment.");
+                editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonWithLink("Pay " + euro, url));
+            } catch (StripeException e) {
                 e.printStackTrace();
             }
         }

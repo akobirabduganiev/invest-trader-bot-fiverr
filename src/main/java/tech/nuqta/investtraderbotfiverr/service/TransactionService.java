@@ -29,4 +29,5 @@ public class TransactionService {
     public void saveTransaction(TransactionLogEntity transactionLogEntity) {
         transactionLogRepository.save(transactionLogEntity);
     }
+
 }
