@@ -24,7 +24,6 @@ import tech.nuqta.investtraderbotfiverr.enums.TransactionStatus;
 import tech.nuqta.investtraderbotfiverr.enums.UserState;
 import tech.nuqta.investtraderbotfiverr.paypal.PaypalService;
 import tech.nuqta.investtraderbotfiverr.repository.UserRepository;
-import tech.nuqta.investtraderbotfiverr.stripe.StripeService;
 import tech.nuqta.investtraderbotfiverr.utils.TelegramBotUtils;
 
 import java.util.*;
@@ -40,7 +39,6 @@ public class MessageService {
     private final MessageSource messageSource;
     private final UserRepository userRepository;
     private final PaypalService paypalService;
-    private final StripeService stripeService;
     private final TransactionService transactionService;
     private final SubscriptionService subscriptionService;
 
@@ -223,7 +221,7 @@ public class MessageService {
                 transactionLog.setTransactionId(session.getId());
                 transactionService.saveTransaction(transactionLog);
 
-                String url = session.getUrl(); // use getUrl method on session object
+                String url = session.getUrl();
                 editMessageText.setText("Please select the option below to complete your payment.");
                 editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonWithLink("Pay " + euro, url));
             } catch (StripeException e) {
