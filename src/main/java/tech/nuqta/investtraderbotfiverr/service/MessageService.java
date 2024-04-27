@@ -163,72 +163,75 @@ public class MessageService {
         }
         var euro = subscriptionEntity.getSubscriptionType() == SubscriptionType.MONTHLY ? monthlySubscriptionValue : weeklySubscriptionValue;
         double value = Double.parseDouble(euro.replace("€", "").replace(",", "."));
+        transactionLog.setMessageId(editMessageText.getMessageId());
         if (transactionLog.getPaymentMethod() == PaymentMethod.PAYPAL) {
-            try {
-                String link = getPaymentUrl(value, transactionLog);
-                editMessageText.setText("Please select the option below to complete your payment.");
-                editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonWithLink("Pay " + euro, link));
-            } catch (PayPalRESTException e) {
-                e.printStackTrace();
-            }
+            var link = generatePaypalPaymentAndReturnApprovalUrl(value, transactionLog);
+            editMessageText.setText("Please select the option below to complete your payment.");
+            editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonWithLink("Pay " + euro, link));
         } else if (transactionLog.getPaymentMethod() == PaymentMethod.STRIPE) {
-            try {
-                String url = generateStripeCheckoutUrl(value, transactionLog);
-                editMessageText.setText("Please select the option below to complete your payment.");
-                editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonWithLink("Pay " + euro, url));
-            } catch (StripeException e) {
-                e.printStackTrace();
-            }
+            String url = generateStripeCheckoutUrl(value, transactionLog);
+            editMessageText.setText("Please select the option below to complete your payment.");
+            editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonWithLink("Pay " + euro, url));
         }
         telegramBot.sendMsg(editMessageText);
     }
 
-    private String getPaymentUrl(double value, TransactionLogEntity transactionLog) throws PayPalRESTException {
-        var payment = paypalService.createPayment(value, "EUR", "paypal", "sale", "Subscription payment", "http://localhost:8080/payment/cancel", "http://localhost:8080/payment/success");
-        transactionLog.setAmount(value);
-        transactionLog.setCurrency("EUR");
-        transactionLog.setDescription("Subscription payment");
-        transactionLog.setStatus(TransactionStatus.PENDING);
-        transactionLog.setTransactionId(payment.getId());
-        transactionService.saveTransaction(transactionLog);
-        for (var links : payment.getLinks()) {
-            if (links.getRel().equals("approval_url")) {
-                return links.getHref();
+    private String generatePaypalPaymentAndReturnApprovalUrl(double value, TransactionLogEntity transactionLog) {
+        try {
+            var payment = paypalService.createPayment(value, "EUR", "paypal", "sale", "Subscription payment", "http://localhost:8080/payment/cancel", "http://localhost:8080/payment/success");
+
+            transactionLog.setAmount(value);
+            transactionLog.setPaymentMethod(PaymentMethod.PAYPAL);
+            transactionLog.setCurrency("EUR");
+            transactionLog.setDescription("Subscription payment");
+            transactionLog.setStatus(TransactionStatus.PENDING);
+            transactionLog.setTransactionId(payment.getId());
+            transactionService.saveTransaction(transactionLog);
+
+            for (var links : payment.getLinks()) {
+                if (links.getRel().equals("approval_url")) {
+                    return links.getHref();
+                }
             }
+            throw new RuntimeException("Approval URL not found");
+        } catch (PayPalRESTException e) {
+            throw new RuntimeException(e);
         }
-        return null;
     }
 
-    private String generateStripeCheckoutUrl(double value, TransactionLogEntity transactionLog) throws StripeException {
-        Stripe.apiKey = "sk_test_51P83twEuQQZGBc7JpXsATNdVQ9zY7Rho8RcRhHZgTIQ6QuPZKV32sZnoPi5Eq2Ic88O2HiX60JzzC5eF8H6iX3ZZ00T3IoU8wC";
+    private String generateStripeCheckoutUrl(double value, TransactionLogEntity transactionLog) {
+        try {
+            Stripe.apiKey = "sk_test_51P83twEuQQZGBc7JpXsATNdVQ9zY7Rho8RcRhHZgTIQ6QuPZKV32sZnoPi5Eq2Ic88O2HiX60JzzC5eF8H6iX3ZZ00T3IoU8wC";
 
-        Map<String, Object> checkoutSessionParams = new LinkedHashMap<>();
-        checkoutSessionParams.put("cancel_url", "http://localhost:8080/payment/cancel");
-        checkoutSessionParams.put("success_url", "http://localhost:8080/payment/success");
-        checkoutSessionParams.put("payment_method_types", Collections.singletonList("card"));
-        checkoutSessionParams.put("mode", "payment");
+            Map<String, Object> checkoutSessionParams = new LinkedHashMap<>();
+            checkoutSessionParams.put("cancel_url", "http://localhost:8080/payment/cancel");
+            checkoutSessionParams.put("success_url", "http://localhost:8080/payment/success");
+            checkoutSessionParams.put("payment_method_types", Collections.singletonList("card"));
+            checkoutSessionParams.put("mode", "payment");
 
-        Map<String, Object> lineItem = new LinkedHashMap<>();
-        Map<String, Object> priceData = new LinkedHashMap<>();
+            Map<String, Object> lineItem = new LinkedHashMap<>();
+            Map<String, Object> priceData = new LinkedHashMap<>();
 
-        priceData.put("currency", "eur");
-        priceData.put("unit_amount", (long) value * 100);
-        priceData.put("product_data", Map.of("name", "Subscription payment"));
-        lineItem.put("price_data", priceData);
-        lineItem.put("quantity", 1);
+            priceData.put("currency", "eur");
+            priceData.put("unit_amount", (long) value * 100);
+            priceData.put("product_data", Map.of("name", "Subscription payment"));
+            lineItem.put("price_data", priceData);
+            lineItem.put("quantity", 1);
 
-        checkoutSessionParams.put("line_items", Collections.singletonList(lineItem));
+            checkoutSessionParams.put("line_items", Collections.singletonList(lineItem));
 
-        Session session = Session.create(checkoutSessionParams);
-
-        transactionLog.setAmount(value);
-        transactionLog.setCurrency("EUR");
-        transactionLog.setDescription("Subscription payment");
-        transactionLog.setStatus(TransactionStatus.PENDING);
-        transactionLog.setTransactionId(session.getId());
-        transactionService.saveTransaction(transactionLog);
-
-        return session.getUrl();
+            var session = Session.create(checkoutSessionParams);
+            transactionLog.setPaymentMethod(PaymentMethod.STRIPE);
+            transactionLog.setAmount(value);
+            transactionLog.setCurrency("EUR");
+            transactionLog.setDescription("Subscription payment");
+            transactionLog.setStatus(TransactionStatus.PENDING);
+            transactionLog.setTransactionId(session.getId());
+            transactionService.saveTransaction(transactionLog);
+            return session.getUrl();
+        } catch (StripeException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private List<Map.Entry<String, String>> createLanguageButtonList() {

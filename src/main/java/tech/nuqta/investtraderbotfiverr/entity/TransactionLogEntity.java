@@ -12,6 +12,7 @@ import tech.nuqta.investtraderbotfiverr.enums.TransactionStatus;
 @Table(name = "transaction_logs")
 public class TransactionLogEntity extends BaseEntity {
     private Long telegramId;
+    private Integer messageId;
     private PaymentMethod paymentMethod;
     private String transactionId;
     private Double amount;

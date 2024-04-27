@@ -26,10 +26,7 @@ public class PaypalService {
             String cancelUrl,
             String successUrl) throws PayPalRESTException {
 
-        // Set unique RequestId for each API call
         apiContext.setRequestId(UUID.randomUUID().toString());
-
-        // Continue your existing code...
 
         var amount = new Amount();
         amount.setCurrency(currency);
