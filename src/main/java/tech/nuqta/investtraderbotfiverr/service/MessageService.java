@@ -105,9 +105,7 @@ public class MessageService {
         var monthlySubscriptionName = messageSource.getMessage("subscription.type.monthly", null, locale);
         var weeklySubscriptionName = messageSource.getMessage("subscription.type.monthly", null, locale);
 
-        var subscriptionType = callbackQuery.getData().equals(monthlySubscriptionValue)
-                ? monthlySubscriptionName
-                : weeklySubscriptionName;
+        var subscriptionType = callbackQuery.getData().equals(monthlySubscriptionValue) ? monthlySubscriptionName : weeklySubscriptionName;
 
         editMessageText.setText("Choose a payment method for " + subscriptionType + " subscription");
         editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonOneEachRow(buttonList));
@@ -167,61 +165,15 @@ public class MessageService {
         double value = Double.parseDouble(euro.replace("€", "").replace(",", "."));
         if (transactionLog.getPaymentMethod() == PaymentMethod.PAYPAL) {
             try {
-                var payment = paypalService.createPayment(
-                        value,
-                        "EUR",
-                        "paypal",
-                        "sale",
-                        "Subscription payment",
-                        "http://localhost:8080/payment/cancel",
-                        "http://localhost:8080/payment/success");
-                transactionLog.setAmount(value);
-                transactionLog.setCurrency("EUR");
-                transactionLog.setDescription("Subscription payment");
-                transactionLog.setStatus(TransactionStatus.PENDING);
-                transactionLog.setTransactionId(payment.getId());
-                transactionService.saveTransaction(transactionLog);
-                for (var links : payment.getLinks()) {
-                    if (links.getRel().equals("approval_url")) {
-                        editMessageText.setText("Please select the option below to complete your payment.");
-                        editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonWithLink("Pay " + euro, links.getHref()));
-                        break;
-                    }
-                }
+                String link = getPaymentUrl(value, transactionLog);
+                editMessageText.setText("Please select the option below to complete your payment.");
+                editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonWithLink("Pay " + euro, link));
             } catch (PayPalRESTException e) {
                 e.printStackTrace();
             }
-        }else if (transactionLog.getPaymentMethod() == PaymentMethod.STRIPE) {
+        } else if (transactionLog.getPaymentMethod() == PaymentMethod.STRIPE) {
             try {
-                Stripe.apiKey = "sk_test_51P83twEuQQZGBc7JpXsATNdVQ9zY7Rho8RcRhHZgTIQ6QuPZKV32sZnoPi5Eq2Ic88O2HiX60JzzC5eF8H6iX3ZZ00T3IoU8wC";
-
-                Map<String, Object> checkoutSessionParams = new LinkedHashMap<>();
-                checkoutSessionParams.put("cancel_url", "http://localhost:8080/payment/cancel");
-                checkoutSessionParams.put("success_url", "http://localhost:8080/payment/success");
-                checkoutSessionParams.put("payment_method_types", Collections.singletonList("card"));
-                checkoutSessionParams.put("mode", "payment");
-
-                Map<String, Object> lineItem= new LinkedHashMap<>();
-                Map<String, Object> priceData = new LinkedHashMap<>();
-
-                priceData.put("currency", "eur");
-                priceData.put("unit_amount", (long)value*100);
-                priceData.put("product_data", Map.of("name", "Subscription payment"));
-                lineItem.put("price_data", priceData);
-                lineItem.put("quantity", 1);
-
-                checkoutSessionParams.put("line_items", Collections.singletonList(lineItem));
-
-                Session session = Session.create(checkoutSessionParams);
-
-                transactionLog.setAmount(value);
-                transactionLog.setCurrency("EUR");
-                transactionLog.setDescription("Subscription payment");
-                transactionLog.setStatus(TransactionStatus.PENDING);
-                transactionLog.setTransactionId(session.getId());
-                transactionService.saveTransaction(transactionLog);
-
-                String url = session.getUrl();
+                String url = generateStripeCheckoutUrl(value, transactionLog);
                 editMessageText.setText("Please select the option below to complete your payment.");
                 editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonWithLink("Pay " + euro, url));
             } catch (StripeException e) {
@@ -229,6 +181,54 @@ public class MessageService {
             }
         }
         telegramBot.sendMsg(editMessageText);
+    }
+
+    private String getPaymentUrl(double value, TransactionLogEntity transactionLog) throws PayPalRESTException {
+        var payment = paypalService.createPayment(value, "EUR", "paypal", "sale", "Subscription payment", "http://localhost:8080/payment/cancel", "http://localhost:8080/payment/success");
+        transactionLog.setAmount(value);
+        transactionLog.setCurrency("EUR");
+        transactionLog.setDescription("Subscription payment");
+        transactionLog.setStatus(TransactionStatus.PENDING);
+        transactionLog.setTransactionId(payment.getId());
+        transactionService.saveTransaction(transactionLog);
+        for (var links : payment.getLinks()) {
+            if (links.getRel().equals("approval_url")) {
+                return links.getHref();
+            }
+        }
+        return null;
+    }
+
+    private String generateStripeCheckoutUrl(double value, TransactionLogEntity transactionLog) throws StripeException {
+        Stripe.apiKey = "sk_test_51P83twEuQQZGBc7JpXsATNdVQ9zY7Rho8RcRhHZgTIQ6QuPZKV32sZnoPi5Eq2Ic88O2HiX60JzzC5eF8H6iX3ZZ00T3IoU8wC";
+
+        Map<String, Object> checkoutSessionParams = new LinkedHashMap<>();
+        checkoutSessionParams.put("cancel_url", "http://localhost:8080/payment/cancel");
+        checkoutSessionParams.put("success_url", "http://localhost:8080/payment/success");
+        checkoutSessionParams.put("payment_method_types", Collections.singletonList("card"));
+        checkoutSessionParams.put("mode", "payment");
+
+        Map<String, Object> lineItem = new LinkedHashMap<>();
+        Map<String, Object> priceData = new LinkedHashMap<>();
+
+        priceData.put("currency", "eur");
+        priceData.put("unit_amount", (long) value * 100);
+        priceData.put("product_data", Map.of("name", "Subscription payment"));
+        lineItem.put("price_data", priceData);
+        lineItem.put("quantity", 1);
+
+        checkoutSessionParams.put("line_items", Collections.singletonList(lineItem));
+
+        Session session = Session.create(checkoutSessionParams);
+
+        transactionLog.setAmount(value);
+        transactionLog.setCurrency("EUR");
+        transactionLog.setDescription("Subscription payment");
+        transactionLog.setStatus(TransactionStatus.PENDING);
+        transactionLog.setTransactionId(session.getId());
+        transactionService.saveTransaction(transactionLog);
+
+        return session.getUrl();
     }
 
     private List<Map.Entry<String, String>> createLanguageButtonList() {
