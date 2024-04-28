@@ -26,6 +26,8 @@ import tech.nuqta.investtraderbotfiverr.paypal.PaypalService;
 import tech.nuqta.investtraderbotfiverr.repository.UserRepository;
 import tech.nuqta.investtraderbotfiverr.utils.TelegramBotUtils;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import static tech.nuqta.investtraderbotfiverr.enums.UserState.LANGUAGE_CHOOSING;
@@ -178,7 +180,13 @@ public class MessageService {
 
     private String generatePaypalPaymentAndReturnApprovalUrl(double value, TransactionLogEntity transactionLog) {
         try {
-            var payment = paypalService.createPayment(value, "EUR", "paypal", "sale", "Subscription payment", "http://localhost:8080/payment/cancel", "http://localhost:8080/payment/success");
+            var payment = paypalService.createPayment(value,
+                    "EUR",
+                    "paypal",
+                    "sale",
+                    "Subscription payment",
+                    "http://localhost:8080/payment/cancel",
+                    "http://localhost:8080/payment/success");
 
             transactionLog.setAmount(value);
             transactionLog.setPaymentMethod(PaymentMethod.PAYPAL);
@@ -205,7 +213,7 @@ public class MessageService {
 
             Map<String, Object> checkoutSessionParams = new LinkedHashMap<>();
             checkoutSessionParams.put("cancel_url", "http://localhost:8080/payment/cancel");
-            checkoutSessionParams.put("success_url", "http://localhost:8080/payment/success");
+            checkoutSessionParams.put("success_url", "https://t.me/InvestTraderBot");
             checkoutSessionParams.put("payment_method_types", Collections.singletonList("card"));
             checkoutSessionParams.put("mode", "payment");
 
@@ -256,5 +264,18 @@ public class MessageService {
         sendMessage.setText(text);
         sendMessage.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonOneEachRow(buttonList));
         return sendMessage;
+    }
+
+    public void handleSubscribedUserMessage(Message message, SubscriptionEntity subscriptionEntity) {
+        var sendMessage = new SendMessage();
+        sendMessage.setChatId(message.getChatId().toString());
+        LocalDateTime expiryDate = subscriptionEntity.getExpiryDate();
+        var duration = Duration.between(LocalDateTime.now(), expiryDate);
+
+        long days = duration.toDays();
+        sendMessage.setText("You are already subscribed to our service. Enjoy! \uD83D\uDE0A" +
+                "\n\nYour subscription will expire in " + days + " days.");
+        telegramBot.sendMsg(sendMessage);
+
     }
 }

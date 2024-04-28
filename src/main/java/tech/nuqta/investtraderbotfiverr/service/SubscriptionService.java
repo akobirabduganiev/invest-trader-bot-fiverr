@@ -39,6 +39,12 @@ public class SubscriptionService {
 
     }
 
+    /**
+     * Activates a subscription for a user.
+     *
+     * @param user         the user for whom the subscription is being activated
+     * @param subscription the subscription to be activated
+     */
     public void activateSubscription(UserEntity user, SubscriptionEntity subscription) {
         subscription.setIsActive(true);
         if (subscription.getSubscriptionType().equals(SubscriptionType.MONTHLY))
@@ -67,13 +73,6 @@ public class SubscriptionService {
         return subscriptionRepository.findByUser(user).orElse(new SubscriptionEntity());
     }
 
-/*    public void cancelSubscription(UserEntity user) {
-        Optional<SubscriptionEntity> subscription = subscriptionRepository.findByUser(user);
-        subscription.ifPresent(subscriptionEntity -> {
-            subscriptionEntity.setIsActive(false);
-            subscriptionRepository.save(subscriptionEntity);
-        });
-    }*/
 
     public void saveSubscription(SubscriptionEntity subscriptionEntity) {
         subscriptionRepository.save(subscriptionEntity);

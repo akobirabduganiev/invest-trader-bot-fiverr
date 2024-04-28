@@ -2,7 +2,6 @@ package tech.nuqta.investtraderbotfiverr.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -20,7 +19,6 @@ import tech.nuqta.investtraderbotfiverr.service.UserService;
 @Component
 public class TelegramBot extends TelegramLongPollingBot {
     private final MessageService messageService;
-    private final MessageSource messageSource;
     private final UserService userService;
     private static final String BOT_USERNAME = "@InvestTraderBot";
     @Value("${subscription.type.monthly}")
@@ -30,10 +28,9 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Lazy
     @Autowired
-    public TelegramBot(TelegramBotsApi telegramBotsApi, MessageService messageService, MessageSource messageSource, UserService userService) throws TelegramApiException {
+    public TelegramBot(TelegramBotsApi telegramBotsApi, MessageService messageService, UserService userService) throws TelegramApiException {
         super("7019113638:AAEjBNmHpDhrHOaoyrc1w6e6NAMyULDfJpE");
         this.messageService = messageService;
-        this.messageSource = messageSource;
         this.userService = userService;
         telegramBotsApi.registerBot(this);
     }
@@ -43,6 +40,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (update.hasMessage()) {
             var message = update.getMessage();
             var state = userService.getUserState(message.getChatId(), message.getFrom());
+            var subscription = userService.getUser(message.getChatId()).getSubscription();
+            if (subscription.getIsActive().equals(true)) {
+                messageService.handleSubscribedUserMessage(message, subscription);
+                return;
+            }
             if (state == UserState.START) {
                 messageService.handleStartMessage(message);
             } else {
