@@ -1,7 +1,12 @@
 package tech.nuqta.investtraderbotfiverr.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.telegram.telegrambots.meta.api.methods.groupadministration.CreateChatInviteLink;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import tech.nuqta.investtraderbotfiverr.config.TelegramBot;
 import tech.nuqta.investtraderbotfiverr.entity.SubscriptionEntity;
 import tech.nuqta.investtraderbotfiverr.entity.UserEntity;
 import tech.nuqta.investtraderbotfiverr.enums.SubscriptionType;
@@ -14,6 +19,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class SubscriptionService {
     private final SubscriptionRepository subscriptionRepository;
+    private final TelegramBot telegramBot;
+    @Value("${subscription.group.id}")
+    private Long groupId;
 
 
     public void createOrUpdateSubscription(UserEntity user, SubscriptionEntity subscription) {
@@ -40,6 +48,19 @@ public class SubscriptionService {
 
         createOrUpdateSubscription(user, subscription);
 
+        var createLink = new CreateChatInviteLink();
+        createLink.setChatId(groupId);
+        createLink.setMemberLimit(1);
+        try {
+            var chatLink = telegramBot.execute(createLink);
+            var sendMessage = new SendMessage();
+            sendMessage.setChatId(user.getTelegramId().toString());
+            sendMessage.setText("Your subscription has been activated. Join the group using the link below\n" + chatLink.getInviteLink());
+            telegramBot.sendMsg(sendMessage);
+
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public SubscriptionEntity getSubscription(UserEntity user) {

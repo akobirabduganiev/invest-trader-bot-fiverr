@@ -11,3 +11,5 @@ subscription:
   type:
     monthly: 25,00 €
     weekly: 10,00 €
+  group:
+    id: -1001615880779
