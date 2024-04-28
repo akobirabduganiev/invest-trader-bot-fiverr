@@ -41,16 +41,16 @@ public class UserService {
     @CacheEvict(value = "state", key = "#telegramId")
     public UserEntity updateUserState(Long telegramId, UserState state) {
         Optional<UserEntity> userEntityOptional = userRepository.findByTelegramId(telegramId);
-        UserEntity userEntity;
+        UserEntity entity;
         if (userEntityOptional.isPresent()) {
-            userEntity = userEntityOptional.get();
+            entity = userEntityOptional.get();
         } else {
-            userEntity = new UserEntity();
-            userEntity.setTelegramId(telegramId);
+            entity = new UserEntity();
+            entity.setTelegramId(telegramId);
         }
-        userEntity.setState(state);
-        userRepository.save(userEntity);
-        return userEntity;
+        entity.setState(state);
+        userRepository.save(entity);
+        return entity;
     }
 
     @CacheEvict(value = "state", key = "#userEntity.getTelegramId()")

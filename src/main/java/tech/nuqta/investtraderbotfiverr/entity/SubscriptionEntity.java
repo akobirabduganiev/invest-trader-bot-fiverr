@@ -19,6 +19,5 @@ public class SubscriptionEntity extends BaseEntity {
     @OneToOne(mappedBy = "subscription", cascade = CascadeType.ALL)
     private UserEntity user;
     private LocalDateTime expiryDate;
-    private Boolean isActive;
-    private Integer remainingDays;
+    private Boolean isActive = false;
 }
