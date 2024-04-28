@@ -48,6 +48,7 @@ public class MessageService {
     private String monthlySubscriptionValue;
     @Value("${subscription.type.weekly}")
     private String weeklySubscriptionValue;
+    private final String serverAddress = "http://localhost:8080";
 
     public void handleStartMessage(Message message) {
         var buttonList = createLanguageButtonList();
@@ -178,6 +179,19 @@ public class MessageService {
         telegramBot.sendMsg(editMessageText);
     }
 
+    public void handleSubscribedUserMessage(Message message, SubscriptionEntity subscriptionEntity) {
+        var sendMessage = new SendMessage();
+        sendMessage.setChatId(message.getChatId().toString());
+        LocalDateTime expiryDate = subscriptionEntity.getExpiryDate();
+        var duration = Duration.between(LocalDateTime.now(), expiryDate);
+
+        long days = duration.toDays();
+        sendMessage.setText("You are already subscribed to our service. Enjoy! \uD83D\uDE0A" +
+                "\n\nYour subscription will expire in " + days + " days.");
+        telegramBot.sendMsg(sendMessage);
+
+    }
+
     private String generatePaypalPaymentAndReturnApprovalUrl(double value, TransactionLogEntity transactionLog) {
         try {
             var payment = paypalService.createPayment(value,
@@ -185,8 +199,8 @@ public class MessageService {
                     "paypal",
                     "sale",
                     "Subscription payment",
-                    "http://localhost:8080/payment/cancel",
-                    "http://localhost:8080/payment/success");
+                    serverAddress + "/payment/cancel",
+                    serverAddress + "/payment/success");
 
             transactionLog.setAmount(value);
             transactionLog.setPaymentMethod(PaymentMethod.PAYPAL);
@@ -212,7 +226,8 @@ public class MessageService {
             Stripe.apiKey = "sk_test_51P83twEuQQZGBc7JpXsATNdVQ9zY7Rho8RcRhHZgTIQ6QuPZKV32sZnoPi5Eq2Ic88O2HiX60JzzC5eF8H6iX3ZZ00T3IoU8wC";
 
             Map<String, Object> checkoutSessionParams = new LinkedHashMap<>();
-            checkoutSessionParams.put("cancel_url", "http://localhost:8080/payment/cancel");
+            var cancelUrl = serverAddress + "/payment/cancel";
+            checkoutSessionParams.put("cancel_url", cancelUrl);
             checkoutSessionParams.put("success_url", "https://t.me/InvestTraderBot");
             checkoutSessionParams.put("payment_method_types", Collections.singletonList("card"));
             checkoutSessionParams.put("mode", "payment");
@@ -266,16 +281,5 @@ public class MessageService {
         return sendMessage;
     }
 
-    public void handleSubscribedUserMessage(Message message, SubscriptionEntity subscriptionEntity) {
-        var sendMessage = new SendMessage();
-        sendMessage.setChatId(message.getChatId().toString());
-        LocalDateTime expiryDate = subscriptionEntity.getExpiryDate();
-        var duration = Duration.between(LocalDateTime.now(), expiryDate);
 
-        long days = duration.toDays();
-        sendMessage.setText("You are already subscribed to our service. Enjoy! \uD83D\uDE0A" +
-                "\n\nYour subscription will expire in " + days + " days.");
-        telegramBot.sendMsg(sendMessage);
-
-    }
 }
