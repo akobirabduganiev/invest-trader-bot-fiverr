@@ -192,13 +192,14 @@ public class MessageService {
 
     public void handleSubscribedUserMessage(Message message, SubscriptionEntity subscriptionEntity) {
         var sendMessage = new SendMessage();
-        sendMessage.setChatId(message.getChatId().toString());
-        LocalDateTime expiryDate = subscriptionEntity.getExpiryDate();
+        var expiryDate = subscriptionEntity.getExpiryDate();
         var duration = Duration.between(LocalDateTime.now(), expiryDate);
+        var locale = new Locale(userRepository.findByTelegramId(message.getChatId()).get().getLanguage());
+        var days = duration.toDays();
 
-        long days = duration.toDays();
-        sendMessage.setText("You are already subscribed to our service. Enjoy! \uD83D\uDE0A" +
-                "\n\nYour subscription will expire in " + days + " days.");
+        sendMessage.setChatId(message.getChatId().toString());
+        sendMessage.setText(messageSource.getMessage("subscription.active.message", new Object[]{days}, locale));
+
         telegramBot.sendMsg(sendMessage);
     }
 
