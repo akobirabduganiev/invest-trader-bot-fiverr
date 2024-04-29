@@ -76,7 +76,8 @@ public class PaypalController {
 
 
     @GetMapping("/payment/cancel")
-    public String paymentCancel() {
+    public String paymentCancel(@RequestParam("paymentId") String paymentId) {
+        transactionService.markTransactionAsCancel(paymentId);
         return "paymentCancel";
     }
 

@@ -8,8 +8,10 @@ import tech.nuqta.investtraderbotfiverr.config.TelegramBot;
 import tech.nuqta.investtraderbotfiverr.entity.SubscriptionEntity;
 import tech.nuqta.investtraderbotfiverr.entity.TransactionLogEntity;
 import tech.nuqta.investtraderbotfiverr.entity.UserEntity;
-import tech.nuqta.investtraderbotfiverr.enums.TransactionStatus;
 import tech.nuqta.investtraderbotfiverr.repository.TransactionLogRepository;
+
+import static tech.nuqta.investtraderbotfiverr.enums.TransactionStatus.CANCELLED;
+import static tech.nuqta.investtraderbotfiverr.enums.TransactionStatus.SUCCESS;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +29,7 @@ public class TransactionService {
             deleteMessage.setMessageId(transactionLogEntity.getMessageId());
             telegramBot.sendMsg(deleteMessage);
 
-            transactionLogEntity.setStatus(TransactionStatus.SUCCESS);
+            transactionLogEntity.setStatus(SUCCESS);
             transactionLogRepository.save(transactionLogEntity);
             sendMessage.setChatId(transactionLogEntity.getTelegramId().toString());
             sendMessage.setText("Your transaction has been successfully completed.");
@@ -38,6 +40,13 @@ public class TransactionService {
 
         });
 
+    }
+
+    public void markTransactionAsCancel(String paymentId) {
+        transactionLogRepository.findByTransactionId(paymentId).ifPresent(transactionLogEntity -> {
+            transactionLogEntity.setStatus(CANCELLED);
+            transactionLogRepository.save(transactionLogEntity);
+        });
     }
 
     public void saveTransaction(TransactionLogEntity transactionLogEntity) {
