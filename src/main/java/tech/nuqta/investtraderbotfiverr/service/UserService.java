@@ -3,12 +3,14 @@ package tech.nuqta.investtraderbotfiverr.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.User;
+import tech.nuqta.investtraderbotfiverr.entity.UserEntity;
 import tech.nuqta.investtraderbotfiverr.enums.UserState;
 import tech.nuqta.investtraderbotfiverr.repository.UserRepository;
-import tech.nuqta.investtraderbotfiverr.entity.UserEntity;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -17,18 +19,13 @@ public class UserService {
     private final UserRepository userRepository;
 
     @Cacheable(value = "state", key = "#telegramId")
-    public UserState getUserState(Long telegramId, User user) {
+    public UserState getUserState(Long telegramId) {
         Optional<UserEntity> userEntityOptional = userRepository.findByTelegramId(telegramId);
         UserEntity userEntity;
         if (userEntityOptional.isPresent()) {
             userEntity = userEntityOptional.get();
         } else {
-            userEntity = new UserEntity();
-            userEntity.setTelegramId(user.getId());
-            userEntity.setName(user.getFirstName());
-            userEntity.setUsername(user.getUserName());
-            userEntity.setState(UserState.START);
-            userRepository.save(userEntity);
+            return UserState.START;
         }
         return userEntity.getState();
     }
@@ -58,4 +55,7 @@ public class UserService {
         userRepository.save(userEntity);
     }
 
+    public List<UserEntity> findAllWithActiveSubscriptions() {
+        return userRepository.findAllWithActiveSubscriptions();
+    }
 }

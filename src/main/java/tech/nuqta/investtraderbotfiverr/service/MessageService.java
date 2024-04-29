@@ -189,7 +189,6 @@ public class MessageService {
         sendMessage.setText("You are already subscribed to our service. Enjoy! \uD83D\uDE0A" +
                 "\n\nYour subscription will expire in " + days + " days.");
         telegramBot.sendMsg(sendMessage);
-
     }
 
     private String generatePaypalPaymentAndReturnApprovalUrl(double value, TransactionLogEntity transactionLog) {

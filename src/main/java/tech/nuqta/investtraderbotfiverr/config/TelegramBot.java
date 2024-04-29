@@ -37,23 +37,30 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
+
         if (update.hasMessage()) {
             var message = update.getMessage();
-            var state = userService.getUserState(message.getChatId(), message.getFrom());
+            var state = userService.getUserState(message.getChatId());
             var subscription = userService.getUser(message.getChatId()).getSubscription();
-            if (subscription.getIsActive().equals(true)) {
-                messageService.handleSubscribedUserMessage(message, subscription);
+            var isBot = message.getFrom().getIsBot();
+            if (message.getChatId() < 0) {
                 return;
             }
-            if (state == UserState.START) {
-                messageService.handleStartMessage(message);
-            } else {
-                messageService.handleMainMessage(message);
+            if (!isBot) {
+                if (subscription != null && subscription.getIsActive().equals(true)) {
+                    messageService.handleSubscribedUserMessage(message, subscription);
+                    return;
+                }
+                if (state == UserState.START) {
+                    messageService.handleStartMessage(message);
+                } else {
+                    messageService.handleMainMessage(message);
+                }
             }
 
         } else if (update.hasCallbackQuery()) {
             CallbackQuery callbackQuery = update.getCallbackQuery();
-            var state = userService.getUserState(callbackQuery.getFrom().getId(), callbackQuery.getFrom());
+            var state = userService.getUserState(callbackQuery.getFrom().getId());
             if (state == UserState.START) {
                 messageService.handleLanguageCallbackQuery(callbackQuery);
             }
