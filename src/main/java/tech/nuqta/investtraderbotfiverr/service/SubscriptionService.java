@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.BanChatMember;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.CreateChatInviteLink;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.UnbanChatMember;
@@ -27,7 +26,6 @@ public class SubscriptionService {
     private final SubscriptionRepository subscriptionRepository;
     private final UserService userService;
     private final TelegramBot telegramBot;
-    private final TelegramBotsApi telegramBotsApi;
     @Value("${subscription.group.id}")
     private Long groupId;
 
@@ -91,8 +89,8 @@ public class SubscriptionService {
                 var sendMessage = new SendMessage();
                 sendMessage.setChatId(user.getTelegramId().toString());
                 sendMessage.setText("""
-                        Your subscription has expired. Please renew to continue receiving signals
-                        
+                        Your subscription has expired. Please renew to continue receiving signals.
+
                         Use the command "/start" to renew your subscription
                         """);
                 telegramBot.sendMsg(sendMessage);

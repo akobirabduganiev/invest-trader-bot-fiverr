@@ -69,6 +69,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                 messageService.handleSubscriptionCallbackQuery(callbackQuery);
             } else if (callbackQuery.getData().equals("paypal") || callbackQuery.getData().equals("stripe")) {
                 messageService.handlePaymentMethodCallbackQuery(callbackQuery);
+            } else if (callbackQuery.getData().equals("back")) {
+                messageService.handleBackCallbackQuery(callbackQuery);
+
             }
         }
     }
