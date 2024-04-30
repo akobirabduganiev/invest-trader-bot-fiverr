@@ -75,7 +75,8 @@ public class SubscriptionService {
         }
     }
 
-    @Scheduled(cron = "0 0 12 * * ?")  // runs daily at 12pm
+    //    @Scheduled(cron = "0 27 17 * * ?") // 5:27 PM
+    @Scheduled(cron = "0 30 2 * * ?") // 2:30 AM
     public void handleSubscriptions() {
         List<UserEntity> users = userService.findAllWithActiveSubscriptions();
 
