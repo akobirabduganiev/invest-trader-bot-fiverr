@@ -31,8 +31,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 import static tech.nuqta.investtraderbotfiverr.enums.UserState.*;
-import static tech.nuqta.investtraderbotfiverr.enums.UserState.LANGUAGE_CHOOSING;
-import static tech.nuqta.investtraderbotfiverr.enums.UserState.PAYMENT_METHOD_CHOOSING;
 
 @Service
 @RequiredArgsConstructor
@@ -226,12 +224,18 @@ public class MessageService {
     }
 
     public void handleChangedLanguageMessage(CallbackQuery callbackQuery) {
-        var user = callbackQuery.getMessage().getFrom();
-        var userEntity = userService.updateUserState(user.getId(), START);
-        var sendMessage = new SendMessage();
-        sendMessage.setChatId(user.getId());
-        sendMessage.setText("Language changed successfully");
-        telegramBot.sendMsg(sendMessage);
+        var user = callbackQuery.getFrom();
+        var userEntity = userService.getUser(user.getId());
+        userEntity.setState(START);
+        userEntity.setLanguage(callbackQuery.getData());
+        var editMessageText = new EditMessageText();
+        editMessageText.setMessageId(callbackQuery.getMessage().getMessageId());
+        editMessageText.setChatId(user.getId());
+        editMessageText.setText("""
+                Language changed successfully\uD83D\uDE0A\s
+
+                 /start to continue""");
+        telegramBot.sendMsg(editMessageText);
         userService.saveUser(userEntity);
     }
 
