@@ -30,6 +30,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import static tech.nuqta.investtraderbotfiverr.enums.UserState.*;
 import static tech.nuqta.investtraderbotfiverr.enums.UserState.LANGUAGE_CHOOSING;
 import static tech.nuqta.investtraderbotfiverr.enums.UserState.PAYMENT_METHOD_CHOOSING;
 
@@ -122,7 +123,7 @@ public class MessageService {
         editMessageText.setText(subscriptionInfoMessage);
         editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButton(buttonList));
 
-        var userEntity = userService.updateUserState(user.getId(), UserState.PAYMENT_METHOD_CHOOSING);
+        var userEntity = userService.updateUserState(user.getId(), PAYMENT_METHOD_CHOOSING);
         var subscriptionEntity = userEntity.getSubscription();
         if (subscriptionEntity == null) {
             subscriptionEntity = new SubscriptionEntity();
@@ -182,7 +183,7 @@ public class MessageService {
             editMessageText.setText(messageSource.getMessage("payment.ready.message", null, locale));
             editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonWithLink("Pay " + euro, link));
         } else if (transactionLog.getPaymentMethod() == PaymentMethod.STRIPE) {
-            String url = generateStripeCheckoutUrl(value, transactionLog);
+            var url = generateStripeCheckoutUrl(value, transactionLog);
             editMessageText.setText(messageSource.getMessage("payment.ready.message", null, locale));
             editMessageText.setReplyMarkup(TelegramBotUtils.createInlineKeyboardButtonWithLink("Pay " + euro, url));
         }
@@ -201,6 +202,37 @@ public class MessageService {
         sendMessage.setText(messageSource.getMessage("subscription.active.message", new Object[]{days}, locale));
 
         telegramBot.sendMsg(sendMessage);
+    }
+
+    public void handleHelpMessage(Message message) {
+        var sendMessage = new SendMessage();
+        sendMessage.setChatId(message.getChatId().toString());
+        sendMessage.setText("""
+                /change_language - Change language
+                /help - Show help message
+                /start - Start the bot
+                """);
+        telegramBot.sendMsg(sendMessage);
+
+    }
+
+    public void handleChangeLanguageMessage(Message message) {
+        var user = message.getFrom();
+        var userEntity = userService.updateUserState(user.getId(), LANGUAGE_CHANGING);
+        var buttonList = createLanguageButtonList();
+        var sendMessage = createSendMessage(message.getChatId().toString(), "Choose a language:", buttonList);
+        telegramBot.sendMsg(sendMessage);
+        userService.saveUser(userEntity);
+    }
+
+    public void handleChangedLanguageMessage(CallbackQuery callbackQuery) {
+        var user = callbackQuery.getMessage().getFrom();
+        var userEntity = userService.updateUserState(user.getId(), START);
+        var sendMessage = new SendMessage();
+        sendMessage.setChatId(user.getId());
+        sendMessage.setText("Language changed successfully");
+        telegramBot.sendMsg(sendMessage);
+        userService.saveUser(userEntity);
     }
 
     private String generatePaypalPaymentAndReturnApprovalUrl(double value, TransactionLogEntity transactionLog) {

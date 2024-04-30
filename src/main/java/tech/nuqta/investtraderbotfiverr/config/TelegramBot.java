@@ -48,11 +48,25 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
             if (!isBot) {
                 if (subscription != null && subscription.getIsActive().equals(true)) {
-                    messageService.handleSubscribedUserMessage(message, subscription);
-                    return;
+                    if (message.hasText() && message.getText().equals("/help")) {
+                        messageService.handleHelpMessage(message);
+                        return;
+
+                    } else if (message.hasText() && message.getText().equals("/change_language")) {
+                        messageService.handleChangeLanguageMessage(message);
+                        return;
+                    } else {
+                        messageService.handleSubscribedUserMessage(message, subscription);
+                        return;
+                    }
                 }
                 if (state == UserState.START) {
                     messageService.handleStartMessage(message);
+                } else if (message.hasText() && message.getText().equals("/help")) {
+                    messageService.handleHelpMessage(message);
+
+                } else if (message.hasText() && message.getText().equals("/change_language")) {
+                    messageService.handleChangeLanguageMessage(message);
                 } else {
                     messageService.handleMainMessage(message);
                 }
@@ -63,7 +77,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             var state = userService.getUserState(callbackQuery.getFrom().getId());
             if (state == UserState.START) {
                 messageService.handleLanguageCallbackQuery(callbackQuery);
-            }
+            } else if (state == UserState.LANGUAGE_CHANGING)
+                messageService.handleChangedLanguageMessage(callbackQuery);
 
             if (callbackQuery.getData().equals(monthlySubscriptionValue) || callbackQuery.getData().equals(weeklySubscriptionValue)) {
                 messageService.handleSubscriptionCallbackQuery(callbackQuery);
